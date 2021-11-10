@@ -1,6 +1,7 @@
 import random
 import json
 import os.path
+import math
 
 # Represents an instance of a list of elements that need to be ranked and an ordered list of ranked elements
 class Ranker:
@@ -49,20 +50,31 @@ class Ranker:
 
       # Print to_rank and ranked lists
       elif response == 3:
-        print("\n--------------------------------------------------", end="")
-        for _ in range(0, max(len(str(to_rank)), len(str(ranked)))):
-          print("-", end="")
+        print("\n\n- List of things to rank in to_rank (size " + str(len(to_rank)) + "):\t" + str(to_rank))
+        print("- List of ranked things in ranked (size " + str(len(ranked)) + "):\t" + str(ranked) + "\n")
 
-        print("\nList of things to rank in to_rank (size " + str(len(to_rank)) + "):\t" + str(to_rank))
-        print("List of ranked things in ranked (size " + str(len(ranked)) + "):\t" + str(ranked))
+      # Print how many questions will be asked with the remaining number of elements to rank
+      elif response == 4:
+        sum_min = 0
+        sum_max = 0
 
-        print("--------------------------------------------------", end="")
-        for _ in range(0, max(len(str(to_rank)), len(str(ranked)))):
-          print("-", end="")
-        print("\n")
+        # Calculates the minimum and maximum number of questions 
+        for i in range(len(ranked) + 1, len(ranked) + len(to_rank) + 1):
+          min_value = math.floor(math.log(i, 2))
+          max_value = math.ceil(math.log(i, 2))
+          sum_min += min_value
+          sum_max += max_value
+
+        print("\n\n- You still have to rank " + str(len(to_rank)) + " thing(s) and " + str(len(ranked)) + " thing(s) have been ranked")
+        print("- You have been asked " + str(len(previous_bounds) // 2) + " question(s) trying to rank " + current)
+        print("- The numbers listed below assume no questions have been asked trying to rank " + current)
+
+        print("\n- Minimum number of questions remaining is " + str(sum_min))
+        print("- Average number of questions remaining is " + str(math.ceil((sum_min + sum_max) / 2)))
+        print("- Maximum number of questions remaining is " + str(sum_max) + "\n")
 
       # Undo previous action
-      elif response == 4:
+      elif response == 5:
         if len(previous_bounds) > 0:
           end = previous_bounds.pop()
           start = previous_bounds.pop()
@@ -70,12 +82,13 @@ class Ranker:
           print("\nNo previous actions for this option")
 
       # Undo this entry
-      elif response == 5:
+      elif response == 6:
         return "undo_entry"
       
       # Rerank a previous entry
-      elif response == 6:
+      elif response == 7:
         entry = False
+        print()
 
         # Run until an entry entered was found to be in the ranked list or the user left it blank
         while not entry:
@@ -89,6 +102,7 @@ class Ranker:
             if not entry:
               print("What you entered was not found in the ranked list, please try again.")
             else:
+              print("\nFound element \"" + response + "\" in the ranked list, now reranking it")
               return ["rerank_entry", response]
 
           # User left the input blank, so cancel this request
@@ -101,10 +115,11 @@ class Ranker:
         print("1: Option 1 is better")
         print("2: Option 2 is better")
         print("3: Print the current list of remaining things to rank and the list of ranked things")
-        print("4: Undo most recent action (will compare option 1 back to the previous option 2)")
-        print("5: Undo this entry and rerank the previous entry")
-        print("6: Remove an entry from the ranked list and rerank it")
-        print("7: Exit program")
+        print("4: Print the remaining number of questions that will be asked")
+        print("5: Undo most recent action (will compare option 1 back to the previous option 2)")
+        print("6: Undo this entry and rerank the previous entry")
+        print("7: Remove an entry from the ranked list and rerank it")
+        print("8: Exit program")
         print("9: Display this help menu\n")
 
       # Quit the program on all other valid options
@@ -230,23 +245,31 @@ while len(to_rank) > 0:
     # Reads all of the JSON lines currently in the file
     with open(filename, "r") as reader:
       lines = reader.readlines()
+    
+    # One line in the list means that it is the initial write, so there is nothing to undo
+    if len(lines) == 1:
+      print("\n\nNo previous entries to undo, reverting back to first comparison made with this option")
 
-    # Writes all of the lines back except for the last one (w+ since the second to last JSON object needs to be read)
-    with open(filename, "w+") as writer:
-      i = 0
-      for line in lines:
+    # Able to undo
+    else:
+      # Writes all of the lines back except for the last one (w+ since the second to last JSON object needs to be read)
+      with open(filename, "w+") as writer:
+        i = 0
+        for line in lines:
 
-        # The second to last JSON object will be used since they were the previous set of lists used to rank
-        if i == len(lines) - 2:
-          obj = json.loads(json.loads(line))
-          to_rank = obj["to_rank"]
-          ranked = obj["ranked"]
-        
-        # Writes back every JSON object except for the last one (not an elif statement since this should run even
-        # when the previous if statement runs)
-        if i != len(lines) - 1:
-          writer.write(line)
-          i += 1
+          # The second to last JSON object will be used since they were the previous set of lists used to rank
+          if i == len(lines) - 2:
+            obj = json.loads(json.loads(line))
+            to_rank = obj["to_rank"]
+            ranked = obj["ranked"]
+          
+          # Writes back every JSON object except for the last one (not an elif statement since this should run even
+          # when the previous if statement runs)
+          if i != len(lines) - 1:
+            writer.write(line)
+            i += 1
+      
+      print("\n\nUndo successful")
 
   # Will run when the user wants to rerank an entry already in the ranked list
   elif type(tuple) == list and tuple[0] == "rerank_entry":
