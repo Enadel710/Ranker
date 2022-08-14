@@ -31,7 +31,7 @@ class Ranker:
       response = 0
       while response < 1 or response > 9:
         try:
-          text = "Which is better: " + str(current) + " or " + str(self.ranked[mid]) + "? (1 or 2, 9 for more options): "
+          text = "Which should be ranked higher: " + str(current) + " or " + str(self.ranked[mid]) + "? (1 or 2, 9 for more options): "
           response = int(input(text))
         except ValueError:
           pass
@@ -51,7 +51,7 @@ class Ranker:
       # Print to_rank and ranked lists
       elif response == 3:
         print("\n\n- List of things to rank in to_rank (size " + str(len(to_rank)) + "):\t" + str(to_rank))
-        print("- List of ranked things in ranked (size " + str(len(ranked)) + "):\t" + str(ranked) + "\n")
+        print("\n- List of ranked things in ranked (size " + str(len(ranked)) + "):\t" + str(ranked) + "\n")
 
       # Print how many questions will be asked with the remaining number of elements to rank
       elif response == 4:
@@ -292,8 +292,13 @@ while len(to_rank) > 0:
       writer.write("\n")
 
 # Printing the final results to standard output
+print("\n" + json.dumps(ranked) + "\n")
+count = 1
+for item in ranked:
+  print(str(count) + ". " + item)
+  count += 1
+
 print()
-print(json.dumps(ranked))
 
 # Will output a clean looking array of the ranked list into the file
 with open(filename, "a") as writer:
