@@ -29,7 +29,7 @@ class Ranker:
       mid = (start + end) // 2
 
       response = 0
-      while response < 1 or response > 9:
+      while response < 1 or response > 10:
         try:
           text = "Which should be ranked higher: " + str(current) + " or " + str(self.ranked[mid]) + "? (1 or 2, 9 for more options): "
           response = int(input(text))
@@ -108,19 +108,93 @@ class Ranker:
           # User left the input blank, so cancel this request
           else:
             entry = True
+      
+      # Add or remove an entry
+      elif response == 8:
+        back1 = True
+        print()
+
+        # Run until the user enters "add", "delete", or leaves it blank
+        while back1:
+          text1 = "Would you like to add or delete an entry? (Type \"add\" or \"delete\", or leave blank to cancel): "
+          response1 = input(text1).lower()
+
+          # If the user typed in something
+          if len(response1) > 0:
+            if response1 == "add":
+              back1 = False
+              back2 = True
+              print()
+
+              # Run until the new entry entered is valid, meaning it is not already in either to_rank or ranked lists, or the user left it blank
+              while back2:
+                text2 = "What entry would you like to add? (Leave blank to cancel): "
+                new_entry = input(text2)
+
+                # If the user typed in something
+                if len(new_entry) > 0:
+                  if new_entry in to_rank:
+                    print("\n" + new_entry + " is already in the list of things to rank")
+                  elif new_entry in ranked:
+                    print("\n" + new_entry + " is already in the list of ranked things")
+                  else:
+                    back2 = False
+                    back3 = True
+                    print()
+
+                    # Run until the user enters "now", "end", "random", or leaves it blank
+                    while back3:
+                      text3 = "Would you like to rank this now, at the end, or put this somewhere in the middle of things left to rank? (Type \"now\", \"end\", or \"random\", or leave blank to cancel): "
+                      insert_request = input(text3).lower()
+
+                      # If the user typed in something
+                      if len(insert_request) > 0:
+                        if insert_request in ["now", "end", "random"]:
+                          return ["add_entry", insert_request, new_entry]
+                        else:
+                          print("\nInvalid option")
+                      
+                      # User typed in nothing, so this will go back to the second loop
+                      else:
+                        back2 = True
+                        back3 = False
+                        print()
+
+                # User typed in nothing, so this will go back to the first loop
+                else:
+                  back1 = True
+                  back2 = False
+                  print()
+
+            
+            elif response1 == "delete":
+              print("Feature to be added")
+              text = "What entry would you like to delete? (Leave blank to cancel): "
+              response2 = input(text)
+
+            # User did not type in "add", "delete", or nothing
+            else:
+              print("\nInvalid option")
+          
+          # User typed in nothing, so cancel this request
+          else:
+            back1 = False
+        
+        print("\n")
 
       # Help menu
       elif response == 9:
         print("\nValid options:")
-        print("1: Option 1 is better")
-        print("2: Option 2 is better")
-        print("3: Print the current list of remaining things to rank and the list of ranked things")
-        print("4: Print the remaining number of questions that will be asked")
-        print("5: Undo most recent action (will compare option 1 back to the previous option 2)")
-        print("6: Undo this entry and rerank the previous entry")
-        print("7: Remove an entry from the ranked list and rerank it")
-        print("8: Exit program")
-        print("9: Display this help menu\n")
+        print(" 1: Option 1 is better")
+        print(" 2: Option 2 is better")
+        print(" 3: Print the current list of remaining things to rank and the list of ranked things")
+        print(" 4: Print the remaining number of questions that will be asked")
+        print(" 5: Undo most recent action (will compare option 1 back to the previous option 2)")
+        print(" 6: Undo this entry and rerank the previous entry")
+        print(" 7: Remove an entry from the ranked list and rerank it")
+        print(" 8: Add or delete an entry")
+        print(" 9: Display this help menu")
+        print("10: Exit program\n")
 
       # Quit the program on all other valid options
       else:
@@ -234,7 +308,9 @@ else:
 # Will run until there is nothing left to rank
 while len(to_rank) > 0:
 
-  if len(ranked) != 0:
+  if len(to_rank) == 1:
+    print("\n" + str(len(to_rank)) + " thing left to rank.")
+  elif len(ranked) != 0:
     print("\n" + str(len(to_rank)) + " things left to rank.")
 
   tuple = Ranker(to_rank, ranked).rank()
@@ -281,6 +357,31 @@ while len(to_rank) > 0:
       json.dump(Ranker(to_rank, ranked).JSON_form(), writer)
       writer.write("\n")
 
+  # Will run when the user wants to add a new entry
+  elif type(tuple) == list and tuple[0] == "add_entry":
+
+    # Adds the new entry to the beginning of to_rank, so this option will immediately replace what is currently being ranked
+    if tuple[1] == "now":
+      to_rank.insert(0, tuple[2])
+      print("\n\nAdded \"" + tuple[2] + "\" to the beginning of the list of things to be ranked")
+    
+    # Adds the new entry to the end of to_rank
+    elif tuple[1] == "end":
+      to_rank.append(tuple[2])
+      print("\n\nAdded \"" + tuple[2] + "\" to the end of the list of things to be ranked")
+
+    # Adds the new entry somewhere random in to_rank
+    else:
+      position = random.randint(0, len(to_rank))
+      to_rank.insert(position, tuple[2])
+      print("\n\nAdded \"" + tuple[2] + "\" somewhere in the list of things to be ranked")
+    
+    # Appends the new to_rank list that has been adjusted to the file containing the JSONs
+    with open(filename, "a") as writer:
+      json.dump(Ranker(to_rank, ranked).JSON_form(), writer)
+      writer.write("\n")
+
+
   # Will run when something new was inserted into the ranked list (and when nothing else was called)
   else:
     to_rank = json.loads(tuple)["to_rank"]
@@ -293,6 +394,7 @@ while len(to_rank) > 0:
 
 # Printing the final results to standard output
 print("\n" + json.dumps(ranked) + "\n")
+
 count = 1
 for item in ranked:
   print(str(count) + ". " + item)
